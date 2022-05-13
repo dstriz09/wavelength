@@ -1,8 +1,15 @@
-import '../styles/globals.css'
-import type { AppProps } from 'next/app'
+import type { AppProps } from "next/app";
+
+import "@elastic/eui/dist/eui_theme_dark.css";
+
+import { EuiProvider } from "@elastic/eui";
 
 function MyApp({ Component, pageProps }: AppProps) {
-  return <Component {...pageProps} />
+  return (
+    <EuiProvider colorMode="dark">
+      <Component {...pageProps} />
+    </EuiProvider>
+  );
 }
 
-export default MyApp
+export default MyApp;
