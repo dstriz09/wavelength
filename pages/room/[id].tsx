@@ -9,7 +9,9 @@ export default function Room({}) {
   const { id } = router.query;
   const [guess, setGuess] = useState(0);
   const [card, setCard] = useState([""]);
-  const [targetGuess, setTargetGuess] = useState(Math.random() * 101);
+  const [targetGuess, setTargetGuess] = useState(
+    Math.floor(Math.random() * 101)
+  );
 
   useEffect(() => {
     setCard(cards[Math.floor(Math.random() * cards.length)]);
