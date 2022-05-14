@@ -2,23 +2,79 @@ import type { NextPage } from "next";
 import React, { useState, useEffect } from "react";
 import { EuiText, EuiFieldText, EuiFlexGroup, EuiFlexItem, EuiButton } from "@elastic/eui";
 import { useRouter } from 'next/router';
+import Link from 'next/link'
+import { database } from '../firebaseConfig';
+import { setDoc, doc, collection, getDocs, where, query, DocumentData } from "firebase/firestore";
+
+const roomsCollection = collection(database,'rooms');
 
 const Home: NextPage = () => {
   const router = useRouter();
-  const [newRoom, setNewRoom] = useState("");
+  const [newRoom, setNewRoom] = useState('');
   const [joinRoom, setJoinRoom] = useState('');
+  const [roomList, setRoomList] = useState<any[]>([]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const getActiveRooms = () => {
+    let docs: React.SetStateAction<any[]> = [];
+    getDocs(roomsCollection)
+      .then((data) => {
+        data.forEach((doc) => {
+          let id = doc.id;
+          let rd = doc.data();
+          rd.id = id;
+          docs.push(rd);
+        })
+        setRoomList(docs)
+      })
+  };
+
+  const createNewRoom = () => {
+    const currentRoom = newRoom;
+    const docID = "randomID"+ currentRoom
+    setDoc(doc(database, "rooms", docID), {
+      room: currentRoom,
+      users: []
+    }).then(() => {
+      setNewRoom('');
+    }).then(() => {
+      router.push(`/room/${newRoom}?roomid=${docID}`);
+    })
+  }
 
   useEffect(() => {
     if(!newRoom) {
       setNewRoom(roomGen());
+      getActiveRooms();
     }
-  }, [newRoom]);
+  }, [getActiveRooms, newRoom]);
 
   const roomGen = () => {
-    function a() {
-      return String.fromCharCode(65+Math.floor(Math.random() * 26));
-    }
+    const a = () => String.fromCharCode(65+Math.floor(Math.random() * 26));
     return a().concat(a(),a(),a());
+  }
+
+  const joinExistingRoom = () => {
+    let matches: DocumentData[] = []
+    getDocs(query(roomsCollection, where("room", "==", joinRoom)))
+      .then(function(querySnapshot) {
+        querySnapshot.forEach(function(doc) {
+          let id = doc.id;
+          let rd = doc.data();
+          rd.id = id;
+          matches.push(rd);
+        });
+    })
+    .catch(function(error) {
+        console.log("Error getting documents: ", error);
+    })
+    .then(() => {
+      if (matches.length > 0){
+        router.push(`/room/${joinRoom}/?roomid=${matches[0].id}`)
+      } else {
+        window.alert("room does not exist");
+      }
+    });
   }
 
   const onChange = (e) => {
@@ -35,7 +91,7 @@ const Home: NextPage = () => {
         <EuiButton
           color="primary"
           onClick={() => {
-            router.push(`/room/${newRoom}`);
+            createNewRoom();
           }}
         >
           Create room
@@ -54,12 +110,25 @@ const Home: NextPage = () => {
           color="primary"
           onClick={() => {
             if(joinRoom.length === 4){
-              router.push(`/room/${joinRoom}`);
+              joinExistingRoom();
             }
           }}
         >
           Join room
         </EuiButton>
+        <br></br>
+        <EuiText textAlign="center">
+          <h3>Active rooms:</h3>
+          {roomList.map((room, key) => {
+            return (
+              <li key={key} id={room.id}>
+                <Link href={`/room/${room.room}?roomid=${room.id}`}>
+                  <a>{room.room}</a>
+                </Link>
+              </li>
+            )
+          })}
+        </EuiText>
       </EuiFlexItem>
     </EuiFlexGroup>
   );
